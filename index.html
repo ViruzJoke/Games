@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกม Zombie Survival Outpost</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom CSS for Inter font and general styling */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Dark background for a more "den" feel */
+            color: #e2e8f0; /* Light text color */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+        .game-container {
+            background-color: #2d3748; /* Slightly lighter dark background for container */
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            max-width: 1200px; /* Wider for more content */
+            width: 100%;
+            border: 1px solid #4a5568;
+        }
+        .section-header {
+            font-size: 1.75rem; /* 28px */
+            font-weight: 700; /* Bold */
+            color: #fbd38d; /* Gold-like color for headers */
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #4a5568;
+            padding-bottom: 0.5rem;
+        }
+        .panel {
+            background-color: #4a5568; /* Darker panel background */
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 1px solid #6b7280;
+        }
+        .list-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background-color: #2d3748;
+            border-radius: 0.75rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border: 1px solid #4a5568;
+        }
+        .list-item:hover {
+            background-color: #4a5568;
+            transform: translateY(-1px);
+        }
+        .list-item.selected {
+            border: 3px solid #fbd38d; /* Gold highlight for selected item */
+            background-color: #5b677a; /* Darker on select */
+            transform: translateY(-2px);
+        }
+        .list-item-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background-color: #2d3748;
+        }
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px; /* Pill shape */
+            font-weight: 600;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            background-image: linear-gradient(to right, var(--tw-gradient-stops)); /* Gradient background */
+        }
+        .button:hover:not(:disabled) {
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+        .button:active:not(:disabled) {
+            transform: translateY(0);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            box-shadow: none;
+            background-image: none; /* Disable gradient for disabled state */
+            background-color: #6b7280; /* Gray-500 */
+        }
+        .button-primary {
+            --tw-gradient-from: #f6ad55; /* Orange-400 */
+            --tw-gradient-to: #ed8936; /* Orange-500 */
+            color: #2d3748; /* Dark text for contrast */
+        }
+        .button-success {
+            --tw-gradient-from: #68d391; /* Green-400 */
+            --tw-gradient-to: #48bb78; /* Green-500 */
+            color: #2d3748;
+        }
+        .button-danger {
+            --tw-gradient-from: #fc8181; /* Red-400 */
+            --tw-gradient-to: #e53e3e; /* Red-500 */
+            color: white;
+        }
+        .button-secondary {
+            --tw-gradient-from: #a0aec0; /* Gray-400 */
+            --tw-gradient-to: #718096; /* Gray-500 */
+            color: white;
+        }
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #2d3748;
+            border: 2px solid #fbd38d;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        }
+        .message-box.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .message-box .actions {
+            display: flex;
+            justify-content: space-around;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+
+        /* Equipped item specific styling */
+        .equipped-slot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px dashed #6b7280;
+        }
+        .equipped-slot:last-child {
+            border-bottom: none;
+        }
+        .equipped-slot-name {
+            font-weight: 500;
+            color: #cbd5e0;
+            flex-grow: 1;
+        }
+        .equipped-item-name {
+            color: #fbd38d;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+        .unequip-button {
+            background-color: #e53e3e; /* Red-600 */
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .unequip-button:hover {
+            background-color: #c53030; /* Red-700 */
+        }
+        .facility-assigned-survivors {
+            margin-top: 0.5rem;
+            font-size: 0.875rem; /* text-sm */
+            color: #a0aec0; /* gray-400 */
+        }
+        .facility-assigned-survivors span {
+            display: inline-block;
+            background-color: #5b677a; /* Darker gray */
+            border-radius: 0.5rem;
+            padding: 0.2rem 0.5rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.2rem;
+        }
+
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .game-container {
+                padding: 1rem;
+            }
+            .grid {
+                grid-template-columns: 1fr; /* Stack columns on small screens */
+            }
+            .button {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.9rem;
+            }
+        }
+        @media (min-width: 769px) {
+            .grid {
+                grid-template-columns: 1fr 1fr; /* Two columns for larger screens */
+            }
+        }
+        @media (min-width: 1024px) {
+            .grid {
+                grid-template-columns: 1fr 1fr 1fr; /* Three columns for very large screens */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="text-4xl font-extrabold text-center text-fbd38d mb-6">Zombie Survival Outpost</h1>
+
+        <!-- Top Dashboard -->
+        <div class="panel flex justify-between items-center mb-4">
+            <div class="text-xl font-bold">วัน: <span id="current-day">1</span></div>
+            <div class="flex items-center text-xl font-bold">
+                <span class="mr-2 text-gray-400">&#x1F529;</span> เศษวัสดุ: <span id="player-scrap">0</span>
+                <span class="ml-4 mr-2 text-green-400">&#x1F355;</span> อาหาร: <span id="player-food">0</span>
+                <span class="ml-4 mr-2 text-blue-400">&#x1F4A7;</span> น้ำ: <span id="player-water">0</span>
+                <span class="ml-4 mr-2 text-red-400">&#x1F48A;</span> เวชภัณฑ์: <span id="player-med-supplies">0</span>
+            </div>
+            <div class="flex gap-2 ml-4">
+                <button id="save-game-button" class="button button-secondary text-sm px-3 py-1">
+                    <span class="mr-1">&#x1F4BE;</span> บันทึก
+                </button>
+                <button id="load-game-button" class="button button-secondary text-sm px-3 py-1">
+                    <span class="mr-1">&#x1F4C2;</span> โหลด
+                </button>
+                <button id="next-day-button" class="button button-success text-sm px-3 py-1">
+                    <span class="mr-1">&#x23ED;</span> วันถัดไป
+                </button>
+            </div>
+        </div>
+
+        <!-- Shelter Button / Back to Outpost Button -->
+        <div class="panel flex justify-center mt-2 mb-4">
+            <button id="view-toggle-button" class="button button-primary w-full max-w-sm">
+                <span class="mr-2">&#x1F3E0;</span> ที่พักพิง
+            </button>
+        </div>
+
+        <!-- Main Game View -->
+        <div id="main-game-view">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                <!-- Left Column: Survivor Roster -->
+                <div class="flex flex-col gap-6">
+                    <div class="panel">
+                        <h2 class="section-header">ผู้รอดชีวิต</h2>
+                        <div id="survivor-list" class="flex flex-col gap-2 max-h-80 overflow-y-auto">
+                            <!-- Survivor items will be dynamically inserted here -->
+                            <div class="text-center text-gray-400">กำลังโหลดผู้รอดชีวิต...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Center Column: Survivor Details (ONLY) -->
+                <div class="panel">
+                    <h2 class="section-header">รายละเอียดผู้รอดชีวิต</h2>
+                    <div id="details-panel">
+                        <p class="text-gray-400 text-center mb-4">คลิกที่ผู้รอดชีวิตเพื่อดูรายละเอียด</p>
+                        <div id="selected-survivor-details" class="hidden">
+                            <h3 class="text-2xl font-bold text-fbd38d mb-2" id="detail-survivor-name"></h3>
+                            <p>เลเวล: <span id="detail-survivor-level"></span></p>
+                            <p>XP: <span id="detail-survivor-xp"></span> / <span id="detail-survivor-xp-needed"></span></p>
+                            <p>พลังชีวิต: <span id="detail-survivor-health"></span>/<span id="detail-survivor-max-health"></span> <span id="detail-survivor-injured-status" class="text-red-500 font-semibold ml-2"></span></p>
+                            <p>ความแข็งแกร่ง: <span id="detail-survivor-strength"></span></p>
+                            <p>ความคล่องตัว: <span id="detail-survivor-agility"></span></p>
+
+                            <h4 class="text-xl font-semibold text-fbd38d mt-6 mb-3">อุปกรณ์ที่สวมใส่</h4>
+                            <div id="equipped-items-display" class="flex flex-col gap-2">
+                                <!-- Equipped items will be rendered here dynamically -->
+                            </div>
+                            <button id="heal-survivor-button" class="button button-danger w-full mt-4" disabled>
+                                <span class="mr-2">&#x1F48A;</span> รักษา (10<span class="text-red-400">&#x1F48A;</span>)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Scavenge Mission Board & Inventory -->
+                <div class="flex flex-col gap-6">
+                    <!-- Scavenge Mission Board -->
+                    <div class="panel">
+                        <h2 class="section-header">ภารกิจหาของ</h2>
+                        <div id="scavenge-mission-list" class="flex flex-col gap-2 max-h-40 overflow-y-auto">
+                            <!-- Mission items will be dynamically inserted here -->
+                            <div class="text-center text-gray-400">กำลังโหลดภารกิจ...</div>
+                        </div>
+                        <button id="send-scavenge-mission-button" class="button button-primary w-full mt-4" disabled>
+                            <span class="mr-2">&#x1F4CD;</span> ส่งทีมออกหาของ
+                        </button>
+                    </div>
+
+                    <!-- Inventory Panel -->
+                    <div class="panel">
+                        <h2 class="section-header">คลังอุปกรณ์</h2>
+                        <div id="inventory-list" class="flex flex-col gap-2 max-h-40 overflow-y-auto">
+                            <!-- Inventory items will be dynamically inserted here -->
+                            <div class="text-gray-400">ไม่มีอุปกรณ์ในคลัง</div>
+                        </div>
+                        <button id="buy-item-button" class="button button-secondary w-full mt-4" disabled>
+                            <span class="mr-2">&#x1F529;</span> ซื้ออุปกรณ์ (ราคา: <span id="item-buy-cost">0</span><span class="text-gray-400">&#x1F529;</span>)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shelter View -->
+        <div id="shelter-view" class="hidden">
+            <div class="panel mb-6">
+                <h2 class="section-header">สิ่งก่อสร้างที่พักพิง</h2>
+                <div id="shelter-facilities-list" class="flex flex-col gap-4">
+                    <!-- Facilities will be dynamically inserted here -->
+                    <div class="text-center text-gray-400">กำลังโหลดสิ่งก่อสร้าง...</div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Game Message/Log -->
+        <div class="panel mt-4">
+            <h2 class="section-header">บันทึกกิจกรรม</h2>
+            <div id="game-log" class="bg-gray-800 p-4 rounded-lg text-sm h-40 overflow-y-auto text-gray-300">
+                <!-- Game messages will appear here -->
+                <p>ยินดีต้อนรับสู่ Zombie Survival Outpost!</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Message Box for Alerts -->
+    <div id="message-box" class="message-box">
+        <p id="message-box-text" class="text-lg mb-6"></p>
+        <div class="actions">
+            <button id="message-box-ok" class="button button-primary">ตกลง</button>
+            <button id="message-box-cancel" class="button button-secondary hidden">ยกเลิก</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- DOM Elements ---
+        const currentDayEl = document.getElementById('current-day');
+        const playerScrapEl = document.getElementById('player-scrap');
+        const playerFoodEl = document.getElementById('player-food');
+        const playerWaterEl = document.getElementById('player-water');
+        const playerMedSuppliesEl = document.getElementById('player-med-supplies');
+        const nextDayButton = document.getElementById('next-day-button');
+        const saveGameButton = document.getElementById('save-game-button');
+        const loadGameButton = document.getElementById('load-game-button');
+        const viewToggleButton = document.getElementById('view-toggle-button');
+        const mainGameView = document.getElementById('main-game-view');
+        const shelterView = document.getElementById('shelter-view');
+
+        const survivorListEl = document.getElementById('survivor-list');
+        const scavengeMissionListEl = document.getElementById('scavenge-mission-list');
+        const sendScavengeMissionButton = document.getElementById('send-scavenge-mission-button');
+        const detailsPanelEl = document.getElementById('details-panel');
+        const selectedSurvivorDetailsEl = document.getElementById('selected-survivor-details');
+        const detailSurvivorNameEl = document.getElementById('detail-survivor-name');
+        const detailSurvivorLevelEl = document.getElementById('detail-survivor-level');
+        const detailSurvivorXpEl = document.getElementById('detail-survivor-xp');
+        const detailSurvivorXpNeededEl = document.getElementById('detail-survivor-xp-needed');
+        const detailSurvivorHealthEl = document.getElementById('detail-survivor-health');
+        const detailSurvivorMaxHealthEl = document.getElementById('detail-survivor-max-health');
+        const detailSurvivorInjuredStatusEl = document.getElementById('detail-survivor-injured-status');
+        const detailSurvivorStrengthEl = document.getElementById('detail-survivor-strength');
+        const detailSurvivorAgilityEl = document.getElementById('detail-survivor-agility');
+        const equippedItemsDisplayEl = document.getElementById('equipped-items-display');
+        const healSurvivorButton = document.getElementById('heal-survivor-button');
+        const inventoryListEl = document.getElementById('inventory-list');
+        const buyItemButton = document.getElementById('buy-item-button');
+        const itemBuyCostEl = document.getElementById('item-buy-cost');
+        const gameLogEl = document.getElementById('game-log');
+        const messageBox = document.getElementById('message-box');
+        const messageBoxText = document.getElementById('message-box-text');
+        const messageBoxOk = document.getElementById('message-box-ok');
+        const messageBoxCancel = document.getElementById('message-box-cancel'); // New
+        const shelterFacilitiesListEl = document.getElementById('shelter-facilities-list');
+
+        // --- Game Data ---
+        let gameData = {
+            currentDay: 1,
+            scrap: 500,
+            food: 100,
+            water: 100,
+            medSupplies: 50,
+            survivors: [],
+            scavengeMissions: [],
+            inventory: {},
+            selectedSurvivorId: null,
+            selectedMissionId: null,
+            selectedItemId: null,
+            currentView: 'outpost',
+            shelter: {
+                workshop: { level: 0, maxLevel: 3, name: 'โรงประดิษฐ์', upgradeCostBase: 50, upgradeDurationBase: 1, upgradeResource: 'scrap', benefitDesc: 'ลดต้นทุนอุปกรณ์ 10% ต่อ Lv.', benefit: 0.1, slots: 0, maxSlots: 3, assignedSurvivors: [], isUpgrading: false, upgradeEndTime: 0 },
+                infirmary: { level: 0, maxLevel: 3, name: 'ห้องพยาบาล', upgradeCostBase: 75, upgradeDurationBase: 1, upgradeResource: 'scrap', benefitDesc: 'ลดระยะเวลาภารกิจ 1 วัน & ลดเวลาบาดเจ็บ 1 วัน ต่อ Lv.', benefit: 1, slots: 0, maxSlots: 3, assignedSurvivors: [], isUpgrading: false, upgradeEndTime: 0 },
+                foodFarm: { level: 0, maxLevel: 3, name: 'ฟาร์มอาหาร', upgradeCostBase: 100, upgradeDurationBase: 2, upgradeResource: 'scrap', benefitDesc: 'ผลิตอาหาร +10 หน่วย/วัน ต่อ Lv. (+5% ต่อคน)', production: { food: 10 }, slots: 0, maxSlots: 3, assignedSurvivors: [], isUpgrading: false, upgradeEndTime: 0 },
+                waterPurifier: { level: 0, maxLevel: 3, name: 'ระบบกรองน้ำ', upgradeCostBase: 100, upgradeDurationBase: 2, upgradeResource: 'scrap', benefitDesc: 'ผลิตน้ำ +10 หน่วย/วัน ต่อ Lv. (+5% ต่อคน)', production: { water: 10 }, slots: 0, maxSlots: 3, assignedSurvivors: [], isUpgrading: false, upgradeEndTime: 0 },
+                medicalStorage: { level: 0, maxLevel: 3, name: 'คลังเวชภัณฑ์', upgradeCostBase: 150, upgradeDurationBase: 3, upgradeResource: 'scrap', benefitDesc: 'ผลิตเวชภัณฑ์ +5 หน่วย/วัน ต่อ Lv. (+5% ต่อคน)', production: { medSupplies: 5 }, slots: 0, maxSlots: 3, assignedSurvivors: [], isUpgrading: false, upgradeEndTime: 0 },
+                guardPost: { level: 0, maxLevel: 3, name: 'ป้อมยาม', upgradeCostBase: 120, upgradeDurationBase: 2, upgradeResource: 'scrap', benefitDesc: 'เพิ่มโอกาสสำเร็จภารกิจ +2% ต่อ Lv. (+1% ต่อคน)', bonusChance: 0.02, slots: 0, maxSlots: 3, assignedSurvivors: [], isUpgrading: false, upgradeEndTime: 0 },
+                medicalLab: { level: 0, maxLevel: 3, name: 'ห้องวิจัยแพทย์', upgradeCostBase: 180, upgradeDurationBase: 3, upgradeResource: 'scrap', benefitDesc: 'ผลิตเวชภัณฑ์ +7 หน่วย/วัน ต่อ Lv. (+5% ต่อคน)', production: { medSupplies: 7 }, slots: 0, maxSlots: 3, assignedSurvivors: [], isUpgrading: false, upgradeEndTime: 0 }
+            }
+        };
+
+        const BASE_SURVIVOR_HEALTH = 100;
+        const BASE_INJURY_DURATION = 3;
+        const MAJOR_INJURY_DURATION = 5;
+        const HEAL_COST_MED_SUPPLIES = 10;
+        const SURVIVOR_DISCOVERY_CHANCE = 0.10; // 10% chance
+
+        const BASE_SCAVENGE_MISSIONS = [
+            { id: 'M1', name: 'ซูเปอร์มาร์เก็ตร้าง', difficulty: 'ง่าย', xpReward: 50, scrapReward: 100, itemReward: 'weapon_pipe_melee', successChanceBase: 0.8, duration: 1 },
+            { id: 'M2', name: 'สถานีตำรวจเก่า', difficulty: 'ปานกลาง', xpReward: 100, scrapReward: 200, itemReward: 'armor_makeshift_chest', successChanceBase: 0.6, duration: 2 },
+            { id: 'M3', name: 'โรงพยาบาลที่ถูกทิ้งร้าง', difficulty: 'ยาก', xpReward: 200, scrapReward: 400, itemReward: 'weapon_shotgun', successChanceBase: 0.4, duration: 3 },
+            { id: 'M4', name: 'ลาดตระเวนรอบที่พักพิง', difficulty: 'ง่าย', xpReward: 60, scrapReward: 120, itemReward: 'armor_makeshift_helmet', successChanceBase: 0.75, duration: 1 },
+            { id: 'M5', name: 'แหล่งเชื้อเพลิงเก่า', difficulty: 'ปานกลาง', xpReward: 120, scrapReward: 250, itemReward: 'armor_makeshift_arms', successChanceBase: 0.55, duration: 2 },
+            { id: 'M6', name: 'รังซอมบี้กลายพันธุ์', difficulty: 'ยาก', xpReward: 300, scrapReward: 600, itemReward: 'weapon_assault_rifle', successChanceBase: 0.35, duration: 4 },
+            { id: 'M7', name: 'โกดังเก็บของร้าง', difficulty: 'ปานกลาง', xpReward: 150, scrapReward: 300, itemReward: 'armor_makeshift_legs', successChanceBase: 0.5, duration: 2 },
+            { id: 'M8', name: 'เขตอุตสาหกรรมอันตราย', difficulty: 'ยาก', xpReward: 400, scrapReward: 800, itemReward: 'weapon_heavy_shield', successChanceBase: 0.3, duration: 5 },
+        ];
+
+        const ALL_ITEMS = {
+            'weapon_pipe_melee': { id: 'weapon_pipe_melee', name: 'ท่อนเหล็กทุบ', type: 'weapon', slot: 'one_hand', bonus: { strength: 5, agility: 2 }, cost: 50 },
+            'armor_makeshift_chest': { id: 'armor_makeshift_chest', name: 'เสื้อเกราะประดิษฐ์', type: 'armor', slot: 'chest', bonus: { agility: 5 }, cost: 75 },
+            'weapon_shotgun': { id: 'weapon_shotgun', name: 'ปืนลูกซอง', type: 'weapon', slot: 'two_hand', bonus: { strength: 20, agility: 5 }, cost: 500 },
+            'armor_reinforced_chest': { id: 'armor_reinforced_chest', name: 'เสื้อเกราะเสริมเหล็ก', type: 'armor', slot: 'chest', bonus: { strength: 10 }, cost: 200 },
+            'weapon_assault_rifle': { id: 'weapon_assault_rifle', name: 'ปืนไรเฟิลจู่โจม', type: 'weapon', slot: 'ranged', bonus: { agility: 8 }, cost: 120 },
+            'medical_kit': { id: 'medical_kit', name: 'ชุดปฐมพยาบาล', type: 'consumable', slot: 'none', cost: 30 },
+            'armor_makeshift_helmet': { id: 'armor_makeshift_helmet', name: 'หมวกประดิษฐ์', type: 'armor', slot: 'helmet', bonus: { strength: 2, agility: 1 }, cost: 60 },
+            'armor_makeshift_arms': { id: 'armor_makeshift_arms', name: 'เกราะแขนประดิษฐ์', type: 'armor', slot: 'arms', bonus: { strength: 3, agility: 0 }, cost: 40 },
+            'armor_makeshift_legs': { id: 'armor_makeshift_legs', name: 'เกราะขาประดิษฐ์', type: 'armor', slot: 'legs', bonus: { strength: 3, agility: 1 }, cost: 50 },
+            'weapon_machete': { id: 'weapon_machete', name: 'มีดมาเชเต้', type: 'weapon', slot: 'one_hand', bonus: { strength: 8, agility: 3 }, cost: 80 },
+            'weapon_pistol': { id: 'weapon_pistol', name: 'ปืนพก', type: 'weapon', slot: 'one_hand', bonus: { agility: 6 }, cost: 70 },
+            'weapon_heavy_shield': { id: 'weapon_heavy_shield', name: 'โล่หนัก', type: 'armor', slot: 'shield', bonus: { strength: 15 }, cost: 150 },
+            'armor_military_helmet': { id: 'armor_military_helmet', name: 'หมวกทหาร', type: 'armor', slot: 'helmet', bonus: { strength: 5, agility: 2 }, cost: 150 },
+            'armor_military_chest': { id: 'armor_military_chest', name: 'เสื้อเกราะทหาร', type: 'armor', slot: 'chest', bonus: { strength: 15, agility: 5 }, cost: 300 },
+        };
+
+        const XP_TO_LEVEL = [0, 100, 250, 500, 800, 1200, 1800, 2500, 3500, 5000];
+
+        // --- Utility Functions ---
+        function addLog(message) {
+            const p = document.createElement('p');
+            p.textContent = `[วัน ${gameData.currentDay}] ${message}`;
+            gameLogEl.prepend(p);
+            if (gameLogEl.children.length > 50) {
+                gameLogEl.removeChild(gameLogEl.lastChild);
+            }
+            gameLogEl.scrollTop = 0;
+        }
+
+        let messageBoxTimeout;
+        let messageBoxResolve; // To handle promises for message box
+        function showMessageBox(message, type = 'ok', buttons = ['ok']) {
+            messageBoxText.textContent = message;
+            messageBoxOk.classList.remove('hidden');
+            messageBoxCancel.classList.add('hidden'); // Hide cancel by default
+
+            if (type === 'confirm') {
+                messageBoxOk.textContent = buttons[0] || 'ตกลง';
+                messageBoxCancel.textContent = buttons[1] || 'ยกเลิก';
+                messageBoxCancel.classList.remove('hidden');
+                return new Promise(resolve => {
+                    messageBoxResolve = resolve;
+                });
+            } else {
+                messageBoxOk.textContent = buttons[0] || 'ตกลง';
+                messageBox.classList.add('visible');
+                clearTimeout(messageBoxTimeout);
+                messageBoxTimeout = setTimeout(() => hideMessageBox(), 3000); // Auto-hide after 3 seconds
+            }
+        }
+
+        function hideMessageBox(result = true) {
+            messageBox.classList.remove('visible');
+            if (messageBoxResolve) {
+                messageBoxResolve(result);
+                messageBoxResolve = null; // Clear resolve function
+            }
+        }
+
+        // Function to toggle between Outpost and Shelter views
+        function toggleView() {
+            if (gameData.currentView === 'outpost') {
+                gameData.currentView = 'shelter';
+                mainGameView.classList.add('hidden');
+                shelterView.classList.remove('hidden');
+                viewToggleButton.innerHTML = '<span class="mr-2">&#x1F3D8;</span> กลับไป Outpost';
+                renderShelterFacilities(); // Re-render facilities when opening
+            } else {
+                gameData.currentView = 'outpost';
+                mainGameView.classList.remove('hidden');
+                shelterView.classList.add('hidden');
+                viewToggleButton.innerHTML = '<span class="mr-2">&#x1F3E0;</span> ที่พักพิง';
+            }
+            updateUI(); // To update button states
+        }
+
+        // --- Game Logic ---
+        function initializeGame() {
+            gameData.survivors = [
+                { id: 'S0', name: 'Rick', level: 5, xp: 0, strength: 25, agility: 25, health: BASE_SURVIVOR_HEALTH, maxHealth: BASE_SURVIVOR_HEALTH, isInjured: false, injuryDuration: 0, isBusy: false, missionEndTime: 0, currentMissionId: null, assignedFacilityId: null, equipped: { helmet: null, chest: 'armor_reinforced_chest', arms: null, legs: null, mainHand: 'weapon_shotgun', offHand: null } },
+                { id: 'S1', name: 'Michonne', level: 3, xp: 0, strength: 15, agility: 20, health: BASE_SURVIVOR_HEALTH, maxHealth: BASE_SURVIVOR_HEALTH, isInjured: false, injuryDuration: 0, isBusy: false, missionEndTime: 0, currentMissionId: null, assignedFacilityId: null, equipped: { helmet: null, chest: 'armor_makeshift_chest', arms: null, legs: null, mainHand: 'weapon_machete', offHand: null } },
+                { id: 'S2', name: 'Daryl', level: 4, xp: 0, strength: 20, agility: 18, health: BASE_SURVIVOR_HEALTH, maxHealth: BASE_SURVIVOR_HEALTH, isInjured: false, injuryDuration: 0, isBusy: false, missionEndTime: 0, currentMissionId: null, assignedFacilityId: null, equipped: { helmet: null, chest: null, arms: null, legs: null, mainHand: 'weapon_assault_rifle', offHand: null } }
+            ];
+            gameData.scrap = 500;
+            gameData.food = 200;
+            gameData.water = 200;
+            gameData.medSupplies = 50;
+            gameData.inventory = {
+                'weapon_shotgun': 1,
+                'armor_reinforced_chest': 1,
+                'weapon_pipe_melee': 2,
+                'armor_makeshift_chest': 1,
+                'weapon_assault_rifle': 1,
+                'armor_makeshift_helmet': 1,
+                'armor_makeshift_arms': 1,
+                'armor_makeshift_legs': 1,
+                'weapon_machete': 1,
+                'weapon_pistol': 1,
+                'weapon_heavy_shield': 1,
+            };
+            gameData.currentDay = 1;
+            gameData.selectedSurvivorId = null;
+            gameData.selectedMissionId = null;
+            gameData.selectedItemId = null;
+            gameData.currentView = 'outpost';
+
+            generateNewScavengeMissions();
+            updateUI();
+            addLog("ยินดีต้อนรับสู่ Zombie Survival Outpost! เราต้องรอด!");
+        }
+
+        // Save game state to Local Storage
+        function saveGame() {
+            try {
+                localStorage.setItem('zombieSurvivalSave', JSON.stringify(gameData));
+                addLog("บันทึกเกมสำเร็จ!");
+                showMessageBox("บันทึกเกมสำเร็จ!");
+            } catch (e) {
+                console.error("Error saving game:", e);
+                showMessageBox("บันทึกเกมไม่สำเร็จ!");
+            }
+        }
+
+        // Load game state from Local Storage
+        function loadGame() {
+            try {
+                const savedData = localStorage.getItem('zombieSurvivalSave');
+                if (savedData) {
+                    const loadedGameData = JSON.parse(savedData);
+                    // Ensure compatibility with older saves if new properties are added
+                    // Example: if assignedFacilityId was added later, set default for old saves
+                    if (!loadedGameData.survivors[0].hasOwnProperty('assignedFacilityId')) {
+                         loadedGameData.survivors.forEach(s => s.assignedFacilityId = null);
+                    }
+                    // For facilities, ensure new facilities/properties exist and are initialized if loading old save
+                    for (const key in gameData.shelter) {
+                        if (!loadedGameData.shelter.hasOwnProperty(key)) {
+                            loadedGameData.shelter[key] = gameData.shelter[key]; // Add new facilities
+                        } else {
+                            // Ensure new properties within facilities are also initialized for old saves
+                            if (!loadedGameData.shelter[key].hasOwnProperty('assignedSurvivors')) loadedGameData.shelter[key].assignedSurvivors = [];
+                            if (!loadedGameData.shelter[key].hasOwnProperty('isUpgrading')) loadedGameData.shelter[key].isUpgrading = false;
+                            if (!loadedGameData.shelter[key].hasOwnProperty('upgradeEndTime')) loadedGameData.shelter[key].upgradeEndTime = 0;
+                            if (!loadedGameData.shelter[key].hasOwnProperty('slots')) loadedGameData.shelter[key].slots = 0; // Default to 0 slots for loaded
+                        }
+                    }
+                    
+                    gameData = loadedGameData;
+                    // Reset selected items/survivors for safety after loading
+                    gameData.selectedSurvivorId = null;
+                    gameData.selectedMissionId = null;
+                    gameData.selectedItemId = null;
+                    gameData.currentView = 'outpost'; // Ensure starts on outpost view
+
+                    // Re-calculate assigned slots based on current facility levels for backward compatibility
+                    for (const facilityId in gameData.shelter) {
+                        const facility = gameData.shelter[facilityId];
+                        facility.slots = facility.level; // Set slots based on current level
+                        if (facility.level === 0) facility.slots = 0; // Level 0 means 0 slots
+                    }
+
+
+                    updateUI();
+                    showMainGameView(); // Ensure the correct view is shown
+                    addLog("โหลดเกมสำเร็จ!");
+                    showMessageBox("โหลดเกมสำเร็จ!");
+                } else {
+                    showMessageBox("ไม่พบข้อมูลบันทึก!");
+                    addLog("ไม่พบข้อมูลบันทึก!");
+                }
+            } catch (e) {
+                console.error("Error loading game:", e);
+                showMessageBox("โหลดเกมไม่สำเร็จ! (ข้อมูลอาจเสียหาย)");
+            }
+        }
+
+
+        function generateNewScavengeMissions() {
+            const missionPool = [...BASE_SCAVENGE_MISSIONS];
+            gameData.scavengeMissions = [];
+            for (let i = 0; i < 4; i++) {
+                if (missionPool.length === 0) break;
+                const randomIndex = Math.floor(Math.random() * missionPool.length);
+                gameData.scavengeMissions.push(missionPool.splice(randomIndex, 1)[0]);
+            }
+            addLog("ภารกิจหาของใหม่ปรากฏขึ้นแล้ว!");
+        }
+
+        function calculateSurvivorStats(survivor) {
+            let totalStrength = survivor.strength;
+            let totalAgility = survivor.agility;
+
+            for (const slot in survivor.equipped) {
+                const itemId = survivor.equipped[slot];
+                if (itemId && ALL_ITEMS[itemId]) {
+                    const item = ALL_ITEMS[itemId];
+                    totalStrength += item.bonus.strength || 0;
+                    totalAgility += item.bonus.agility || 0;
+                }
+            }
+            return { strength: totalStrength, agility: totalAgility };
+        }
+
+        function getEffectiveMissionDuration(baseDuration) {
+            const infirmary = gameData.shelter.infirmary;
+            let reduction = (infirmary.level * infirmary.benefit); // Base reduction from infirmary level
+            if (infirmary.isUpgrading) reduction = 0; // No benefit if upgrading
+            // Additional reduction from assigned survivors in infirmary (if any benefit defined)
+            if (infirmary.assignedSurvivors.length > 0) {
+                 // For example, 0.1 day reduction per assigned survivor
+                 reduction += infirmary.assignedSurvivors.length * 0.1;
+            }
+            return Math.max(1, baseDuration - reduction);
+        }
+
+        function getEffectiveInjuryDuration(baseDuration) {
+            const infirmary = gameData.shelter.infirmary;
+            let reduction = (infirmary.level * infirmary.benefit);
+            if (infirmary.isUpgrading) reduction = 0;
+            // Additional reduction from assigned survivors in infirmary
+            if (infirmary.assignedSurvivors.length > 0) {
+                 reduction += infirmary.assignedSurvivors.length * 0.5; // E.g., 0.5 day reduction per assigned survivor
+            }
+            return Math.max(1, baseDuration - reduction);
+        }
+        
+        // Calculate effective bonus chance for missions from Guard Post
+        function getEffectiveMissionSuccessBonus() {
+            const guardPost = gameData.shelter.guardPost;
+            if (guardPost.level === 0 || guardPost.isUpgrading) return 0; // No bonus if not built or upgrading
+            let bonus = guardPost.level * guardPost.bonusChance; // Base bonus from level
+            // Add bonus from assigned survivors
+            if (guardPost.assignedSurvivors.length > 0) {
+                // Example: each assigned survivor adds 0.5% bonus
+                bonus += guardPost.assignedSurvivors.length * 0.005;
+            }
+            return bonus;
+        }
+
+        function sendSurvivorOnScavengeMission() {
+            const survivor = gameData.survivors.find(a => a.id === gameData.selectedSurvivorId);
+            const mission = gameData.scavengeMissions.find(m => m.id === gameData.selectedMissionId);
+
+            if (!survivor || !mission) {
+                showMessageBox("กรุณาเลือกผู้รอดชีวิตและภารกิจก่อน!");
+                return;
+            }
+            if (survivor.isBusy) {
+                showMessageBox(`${survivor.name} กำลังทำภารกิจอยู่!`);
+                return;
+            }
+            if (survivor.isInjured) {
+                showMessageBox(`${survivor.name} บาดเจ็บอยู่! ไม่สามารถไปทำภารกิจได้`);
+                return;
+            }
+            if (survivor.assignedFacilityId) { // Check if assigned to a facility
+                showMessageBox(`${survivor.name} กำลังทำงานอยู่ใน ${gameData.shelter[survivor.assignedFacilityId].name}! ต้องถอนตัวก่อน`);
+                return;
+            }
+
+
+            const effectiveStats = calculateSurvivorStats(survivor);
+            let successChance = mission.successChanceBase;
+
+            successChance += (survivor.level * 0.01);
+            successChance += (effectiveStats.strength * 0.001);
+            successChance += (effectiveStats.agility * 0.001);
+            successChance += getEffectiveMissionSuccessBonus(); // Add global bonus from Guard Post
+
+            successChance = Math.min(0.95, Math.max(0.05, successChance));
+
+            addLog(`${survivor.name} ถูกส่งไปทำภารกิจ "${mission.name}"`);
+
+            survivor.isBusy = true;
+            survivor.currentMissionId = mission.id;
+            survivor.missionEndTime = gameData.currentDay + getEffectiveMissionDuration(mission.duration);
+
+            gameData.selectedSurvivorId = null;
+            gameData.selectedMissionId = null;
+
+            updateUI();
+            showMessageBox(`ผู้รอดชีวิต ${survivor.name} ถูกส่งไปทำภารกิจ "${mission.name}" แล้ว จะกลับมาใน ${getEffectiveMissionDuration(mission.duration)} วัน!`);
+        }
+
+        async function processMissionResults(survivor) {
+            const mission = BASE_SCAVENGE_MISSIONS.find(m => m.id === survivor.currentMissionId);
+            if (!mission) {
+                addLog(`${survivor.name} กลับมาจากภารกิจ แต่ไม่พบข้อมูลภารกิจที่ชัดเจน`);
+                survivor.isBusy = false;
+                survivor.missionEndTime = 0;
+                survivor.currentMissionId = null;
+                return;
+            }
+
+            const successRoll = Math.random();
+            const effectiveStats = calculateSurvivorStats(survivor);
+            let successChance = mission.successChanceBase;
+            successChance += (survivor.level * 0.01);
+            successChance += (effectiveStats.strength * 0.001);
+            successChance += (effectiveStats.agility * 0.001);
+            successChance += getEffectiveMissionSuccessBonus(); // Add global bonus from Guard Post
+            successChance = Math.min(0.95, Math.max(0.05, successChance));
+
+            const outcomeRoll = Math.random();
+
+            let resultMessage = '';
+
+            if (successRoll < successChance) {
+                // Mission Success
+                if (outcomeRoll < 0.8) { // 80% chance for normal success
+                    resultMessage = `${survivor.name} ทำภารกิจ "${mission.name}" สำเร็จ!`;
+                    survivor.xp += mission.xpReward;
+                    gameData.scrap += mission.scrapReward;
+                    addLog(resultMessage);
+                    addLog(`ได้รับ ${mission.scrapReward} เศษวัสดุ และ ${mission.xpReward} XP`);
+                    if (mission.itemReward) {
+                        gameData.inventory[mission.itemReward] = (gameData.inventory[mission.itemReward] || 0) + 1;
+                        addLog(`ได้รับอุปกรณ์: ${ALL_ITEMS[mission.itemReward].name}`);
+                    }
+                    // Chance to find a new survivor
+                    if (Math.random() < SURVIVOR_DISCOVERY_CHANCE) {
+                         await confirmNewSurvivorDiscovery(); // Use await for confirmation
+                    }
+                } else { // 20% chance for injured success
+                    resultMessage = `${survivor.name} ทำภารกิจ "${mission.name}" สำเร็จ แต่ได้รับบาดเจ็บเล็กน้อย!`;
+                    survivor.xp += mission.xpReward;
+                    gameData.scrap += mission.scrapReward;
+                    survivor.isInjured = true;
+                    survivor.injuryDuration = getEffectiveInjuryDuration(BASE_INJURY_DURATION);
+                    survivor.health = Math.max(0, survivor.health - (Math.floor(Math.random() * 20) + 10));
+                    addLog(resultMessage);
+                    addLog(`ได้รับ ${mission.scrapReward} เศษวัสดุ และ ${mission.xpReward} XP`);
+                    if (mission.itemReward) {
+                        gameData.inventory[mission.itemReward] = (gameData.inventory[mission.itemReward] || 0) + 1;
+                        addLog(`ได้รับอุปกรณ์: ${ALL_ITEMS[mission.itemReward].name}`);
+                    }
+                     if (Math.random() < SURVIVOR_DISCOVERY_CHANCE / 2) {
+                         await confirmNewSurvivorDiscovery();
+                     }
+                }
+                checkLevelUp(survivor);
+            } else {
+                // Mission Failure
+                if (outcomeRoll < 0.9) { // 90% chance for minor/injured failure
+                    resultMessage = `${survivor.name} ทำภารกิจ "${mission.name}" ล้มเหลว! `;
+                    survivor.xp += Math.floor(mission.xpReward * 0.1); // 10% XP on failure
+                    if (outcomeRoll < 0.6) { // 60% chance for no gain
+                        resultMessage += `กลับมามือเปล่า`;
+                        addLog(resultMessage);
+                    } else { // 30% chance for injured failure
+                        resultMessage += `และได้รับบาดเจ็บหนัก!`;
+                        survivor.isInjured = true;
+                        survivor.injuryDuration = getEffectiveInjuryDuration(MAJOR_INJURY_DURATION);
+                        survivor.health = Math.max(0, survivor.health - (Math.floor(Math.random() * 30) + 20));
+                        addLog(resultMessage);
+                    }
+                } else { // 10% chance for death
+                    resultMessage = `${survivor.name} เสียชีวิตในภารกิจ "${mission.name}"!`;
+                    addLog(resultMessage);
+                    showMessageBox(`${survivor.name} เสียชีวิตในภารกิจ "${mission.name}"!`);
+                    gameData.survivors = gameData.survivors.filter(s => s.id !== survivor.id);
+                    gameData.selectedSurvivorId = null;
+                    updateUI();
+                    return;
+                }
+            }
+
+            survivor.isBusy = false;
+            survivor.missionEndTime = 0;
+            survivor.currentMissionId = null;
+            updateUI();
+        }
+
+        async function confirmNewSurvivorDiscovery() {
+            const newId = 'S' + (gameData.survivors.length + 1);
+            const survivorNames = ['Ethan', 'Olivia', 'Noah', 'Sophia', 'Liam', 'Emma', 'Aiden', 'Mia', 'Jackson', 'Ava'];
+            const randomName = survivorNames[Math.floor(Math.random() * survivorNames.length)];
+
+            const newSurvivor = {
+                id: newId,
+                name: `${randomName}`,
+                level: 1,
+                xp: 0,
+                strength: 10 + Math.floor(Math.random() * 5),
+                agility: 10 + Math.random() * 5,
+                health: BASE_SURVIVOR_HEALTH,
+                maxHealth: BASE_SURVIVOR_HEALTH,
+                isInjured: false,
+                injuryDuration: 0,
+                isBusy: false,
+                missionEndTime: 0,
+                currentMissionId: null,
+                assignedFacilityId: null, // New property
+                equipped: { helmet: null, chest: null, arms: null, legs: null, mainHand: null, offHand: null }
+            };
+
+            const accept = await showMessageBox(`พบผู้รอดชีวิตคนใหม่: ${newSurvivor.name}! รับเข้ากลุ่มหรือไม่?`, 'confirm', ['รับเข้ากลุ่ม', 'ไม่รับ']);
+            if (accept) {
+                gameData.survivors.push(newSurvivor);
+                addLog(`พบผู้รอดชีวิตคนใหม่: ${newSurvivor.name} และพาเข้าที่พักพิงแล้ว!`);
+                showMessageBox(`รับ ${newSurvivor.name} เข้ากลุ่มแล้ว!`);
+            } else {
+                addLog(`ไม่ได้รับ ${newSurvivor.name} เข้ากลุ่ม`);
+                showMessageBox(`ไม่รับ ${newSurvivor.name} เข้ากลุ่ม`);
+            }
+            updateUI();
+        }
+
+
+        function checkLevelUp(survivor) {
+            const nextLevelXpNeeded = XP_TO_LEVEL[survivor.level];
+            if (nextLevelXpNeeded && survivor.xp >= nextLevelXpNeeded) {
+                survivor.level++;
+                survivor.strength += 2;
+                survivor.agility += 2;
+                survivor.maxHealth += 5;
+                survivor.health = survivor.maxHealth;
+                survivor.xp -= nextLevelXpNeeded;
+                addLog(`${survivor.name} เลเวลอัพเป็น ${survivor.level} แล้ว!`);
+                checkLevelUp(survivor);
+            }
+        }
+
+        function healSurvivor(survivorId) {
+            const survivor = gameData.survivors.find(s => s.id === survivorId);
+            if (!survivor) return;
+
+            if (!survivor.isInjured && survivor.health === survivor.maxHealth) {
+                showMessageBox(`${survivor.name} ไม่ได้บาดเจ็บอยู่!`);
+                return;
+            }
+            if (gameData.medSupplies < HEAL_COST_MED_SUPPLIES) {
+                showMessageBox(`เวชภัณฑ์ไม่พอ! ต้องใช้ ${HEAL_COST_MED_SUPPLIES} เวชภัณฑ์`);
+                return;
+            }
+
+            gameData.medSupplies -= HEAL_COST_MED_SUPPLIES;
+            survivor.health = survivor.maxHealth;
+            survivor.isInjured = false;
+            survivor.injuryDuration = 0;
+            addLog(`${survivor.name} ได้รับการรักษาจนหายเป็นปกติแล้ว!`);
+            updateUI();
+        }
+
+        // New function to unequip an item
+        function unequipItem(survivorId, slot) {
+            const survivor = gameData.survivors.find(s => s.id === survivorId);
+            if (!survivor) return;
+
+            const equippedItemId = survivor.equipped[slot];
+            if (!equippedItemId) {
+                showMessageBox(`ช่อง ${slot} ของ ${survivor.name} ไม่มีอุปกรณ์สวมใส่อยู่!`);
+                return;
+            }
+
+            gameData.inventory[equippedItemId] = (gameData.inventory[equippedItemId] || 0) + 1; // Return to inventory
+            survivor.equipped[slot] = null; // Clear slot
+
+            addLog(`${survivor.name} ถอด ${ALL_ITEMS[equippedItemId].name} ออกแล้ว`);
+            updateUI();
+        }
+
+        function equipItem(survivorId, itemId) {
+            const survivor = gameData.survivors.find(s => s.id === survivorId);
+            const item = ALL_ITEMS[itemId];
+
+            if (!survivor || !item || gameData.inventory[itemId] === 0 || item.type === 'consumable') {
+                showMessageBox("ไม่สามารถสวมใส่อุปกรณ์นี้ได้ หรือเป็นไอเทมใช้แล้วทิ้ง!");
+                return;
+            }
+
+            // Determine target slot
+            let targetSlot;
+            if (item.slot === 'one_hand' || item.slot === 'two_hand' || item.slot === 'ranged' || item.slot === 'shield') {
+                // Handle complex weapon slot logic
+                if (item.slot === 'two_hand' || item.slot === 'ranged') {
+                    // If current main hand is two-handed/ranged, unequip it
+                    if (survivor.equipped.mainHand && (ALL_ITEMS[survivor.equipped.mainHand].slot === 'two_hand' || ALL_ITEMS[survivor.equipped.mainHand].slot === 'ranged')) {
+                        unequipItem(survivor.id, 'mainHand');
+                    }
+                    // If current off hand has anything, unequip it
+                    if (survivor.equipped.offHand) {
+                        unequipItem(survivor.id, 'offHand');
+                    }
+                    targetSlot = 'mainHand';
+                } else if (item.slot === 'one_hand' || item.slot === 'shield') {
+                    // If main hand is free, put it there
+                    if (!survivor.equipped.mainHand) {
+                        targetSlot = 'mainHand';
+                    }
+                    // If main hand has one-hand weapon and off-hand is free, put it in off-hand
+                    else if (survivor.equipped.mainHand && ALL_ITEMS[survivor.equipped.mainHand].slot === 'one_hand' && !survivor.equipped.offHand) {
+                        targetSlot = 'offHand';
+                    }
+                    // If main hand has two-hand/ranged weapon, unequip it and put this in main hand
+                    else if (survivor.equipped.mainHand && (ALL_ITEMS[survivor.equipped.mainHand].slot === 'two_hand' || ALL_ITEMS[survivor.equipped.mainHand].slot === 'ranged')) {
+                        unequipItem(survivor.id, 'mainHand');
+                        targetSlot = 'mainHand';
+                    }
+                    // If both hands are occupied by one-hand weapons, try to replace off-hand
+                    else if (survivor.equipped.mainHand && survivor.equipped.offHand && ALL_ITEMS[survivor.equipped.mainHand].slot === 'one_hand' && (ALL_ITEMS[survivor.equipped.offHand].slot === 'one_hand' || ALL_ITEMS[survivor.equipped.offHand].slot === 'shield')) {
+                        showMessageBox("ช่องมือรองไม่ว่าง อุปกรณ์ในช่องรองจะถูกแทนที่.");
+                        unequipItem(survivor.id, 'offHand');
+                        targetSlot = 'offHand';
+                    } else {
+                        showMessageBox("ช่องอาวุธไม่ว่าง โปรดถอดอุปกรณ์ที่สวมใส่อยู่ก่อน");
+                        return;
+                    }
+                }
+            } else { // Armor slots
+                targetSlot = item.slot;
+                if (survivor.equipped[targetSlot]) {
+                    unequipItem(survivor.id, targetSlot); // Unequip old item
+                }
+            }
+
+            // Perform the equip
+            if (targetSlot) {
+                survivor.equipped[targetSlot] = itemId;
+                gameData.inventory[itemId]--; // Decrease from inventory
+                addLog(`${survivor.name} สวมใส่ ${item.name} แล้ว`);
+                gameData.selectedItemId = null;
+                updateUI();
+            }
+        }
+
+
+        function getBuyCost(itemId) {
+            const item = ALL_ITEMS[itemId];
+            if (!item) return { scrap: Infinity, food: 0, water: 0, medSupplies: 0 };
+
+            let cost = { scrap: item.cost || 0, food: 0, water: 0, medSupplies: 0 };
+
+            const workshop = gameData.shelter.workshop;
+            let discount = 0;
+            if (workshop.level > 0 && !workshop.isUpgrading) {
+                discount = (workshop.level * workshop.benefit);
+            }
+            // Add bonus from assigned survivors in workshop
+            if (workshop.assignedSurvivors.length > 0) {
+                 discount += workshop.assignedSurvivors.length * 0.01; // E.g., 1% additional discount per assigned survivor
+            }
+
+            cost.scrap = Math.max(0, Math.round(cost.scrap * (1 - discount)));
+
+            return cost;
+        }
+
+        function buyItem() {
+            const item = ALL_ITEMS[gameData.selectedItemId];
+            if (!item) {
+                showMessageBox("เลือกอุปกรณ์ที่จะซื้อก่อน!");
+                return;
+            }
+            const cost = getBuyCost(item.id);
+
+            if (gameData.scrap >= cost.scrap && gameData.food >= cost.food && gameData.water >= cost.water && gameData.medSupplies >= cost.medSupplies) {
+                gameData.scrap -= cost.scrap;
+                gameData.food -= cost.food;
+                gameData.water -= cost.water;
+                gameData.medSupplies -= cost.medSupplies;
+
+                gameData.inventory[item.id] = (gameData.inventory[item.id] || 0) + 1;
+                addLog(`ซื้อ ${item.name} มาในราคา ${cost.scrap} เศษวัสดุ`);
+                gameData.selectedItemId = null;
+                updateUI();
+            } else {
+                let missingResources = [];
+                if (gameData.scrap < cost.scrap) missingResources.push(`${cost.scrap - gameData.scrap} เศษวัสดุ`);
+                if (cost.food > 0 && gameData.food < cost.food) missingResources.push(`${cost.food - gameData.food} อาหาร`);
+                if (cost.water > 0 && gameData.water < cost.water) missingResources.push(`${cost.water - gameData.water} น้ำ`);
+                if (cost.medSupplies > 0 && gameData.medSupplies < cost.medSupplies) missingResources.push(`${cost.medSupplies - gameData.medSupplies} เวชภัณฑ์`);
+
+                showMessageBox(`ทรัพยากรไม่พอซื้อ ${item.name}! ขาด: ${missingResources.join(', ')}`);
+            }
+        }
+
+        function getUpgradeCost(facilityId) {
+            const facility = gameData.shelter[facilityId];
+            if (!facility || facility.level >= facility.maxLevel) return { scrap: Infinity };
+
+            let cost = {};
+            cost[facility.upgradeResource] = facility.upgradeCostBase * (facility.level + 1); // Cost based on next level
+
+            return cost;
+        }
+
+        function getUpgradeDuration(facilityId) {
+            const facility = gameData.shelter[facilityId];
+            if (!facility) return Infinity;
+            return facility.upgradeDurationBase * (facility.level + 1); // Duration increases with level
+        }
+
+        function upgradeFacility(facilityId) {
+            const facility = gameData.shelter[facilityId];
+            const cost = getUpgradeCost(facilityId);
+            const resourceType = Object.keys(cost)[0];
+            const duration = getUpgradeDuration(facilityId);
+
+            if (!facility) {
+                showMessageBox("สิ่งก่อสร้างนี้ไม่ถูกต้อง!");
+                return;
+            }
+
+            if (facility.level >= facility.maxLevel) {
+                showMessageBox(`${facility.name} อยู่ที่เลเวลสูงสุดแล้ว!`);
+                return;
+            }
+            if (facility.isUpgrading) {
+                showMessageBox(`${facility.name} กำลังอัปเกรดอยู่!`);
+                return;
+            }
+
+            if (gameData[resourceType] >= cost[resourceType]) {
+                gameData[resourceType] -= cost[resourceType];
+                facility.isUpgrading = true;
+                facility.upgradeEndTime = gameData.currentDay + duration;
+                addLog(`${facility.name} เริ่มอัปเกรดเป็นเลเวล ${facility.level + 1} แล้ว จะเสร็จใน ${duration} วัน!`);
+                updateUI();
+            } else {
+                showMessageBox(`เศษวัสดุไม่พออัปเกรด ${facility.name}! ต้องใช้ ${cost[resourceType]} ${resourceType === 'scrap' ? 'เศษวัสดุ' : ''}`);
+            }
+        }
+
+        // Assign survivor to facility slot
+        function assignSurvivorToFacility(survivorId, facilityId) {
+            const survivor = gameData.survivors.find(s => s.id === survivorId);
+            const facility = gameData.shelter[facilityId];
+
+            if (!survivor || !facility) return;
+            if (survivor.isBusy || survivor.isInjured) {
+                showMessageBox(`${survivor.name} ไม่ว่างหรือบาดเจ็บอยู่!`);
+                return;
+            }
+            if (survivor.assignedFacilityId) {
+                 showMessageBox(`${survivor.name} กำลังทำงานอยู่ใน ${gameData.shelter[survivor.assignedFacilityId].name} แล้ว!`);
+                 return;
+            }
+            if (facility.assignedSurvivors.length >= facility.slots) {
+                showMessageBox(`${facility.name} ไม่มีช่องว่างแล้ว!`);
+                return;
+            }
+            if (facility.level === 0 || facility.isUpgrading) {
+                showMessageBox(`${facility.name} ยังไม่พร้อมใช้งาน หรือกำลังอัปเกรดอยู่!`);
+                return;
+            }
+
+
+            survivor.assignedFacilityId = facilityId;
+            facility.assignedSurvivors.push(survivorId);
+            survivor.isBusy = true; // Mark as busy when assigned to facility
+            addLog(`${survivor.name} ถูกมอบหมายให้ทำงานใน ${facility.name} แล้ว`);
+            updateUI();
+        }
+
+        // Unassign survivor from facility slot
+        function unassignSurvivorFromFacility(survivorId, facilityId) {
+            const survivor = gameData.survivors.find(s => s.id === survivorId);
+            const facility = gameData.shelter[facilityId];
+
+            if (!survivor || !facility) return;
+
+            facility.assignedSurvivors = facility.assignedSurvivors.filter(id => id !== survivorId);
+            survivor.assignedFacilityId = null;
+            survivor.isBusy = false; // No longer busy
+            addLog(`${survivor.name} ถูกถอนตัวออกจาก ${facility.name} แล้ว`);
+            updateUI();
+        }
+
+        // --- UI Update Functions ---
+        function updateUI() {
+            currentDayEl.textContent = gameData.currentDay;
+            playerScrapEl.textContent = gameData.scrap;
+            playerFoodEl.textContent = gameData.food;
+            playerWaterEl.textContent = gameData.water;
+            playerMedSuppliesEl.textContent = gameData.medSupplies;
+
+            renderSurvivors();
+            renderScavengeMissions();
+            renderSelectedSurvivorDetails();
+            renderInventory();
+            renderShelterFacilities();
+            updateSendScavengeMissionButtonState();
+            updateBuyItemButtonState();
+
+            viewToggleButton.innerHTML = gameData.currentView === 'outpost'
+                ? '<span class="mr-2">&#x1F3E0;</span> ที่พักพิง'
+                : '<span class="mr-2">&#x1F3D8;</span> กลับไป Outpost';
+        }
+
+        function renderSurvivors() {
+            survivorListEl.innerHTML = '';
+            const unassignedSurvivors = gameData.survivors.filter(s => s.assignedFacilityId === null);
+
+            if (unassignedSurvivors.length === 0) {
+                survivorListEl.innerHTML = '<div class="text-center text-gray-400 py-4">ไม่มีผู้รอดชีวิตที่ว่างอยู่</div>';
+                return;
+            }
+
+            unassignedSurvivors.forEach(survivor => {
+                const itemDiv = document.createElement('div');
+                let statusText = '';
+                let statusColor = 'text-blue-300';
+
+                if (survivor.isBusy) {
+                    statusText = `กำลังหาของ (${survivor.missionEndTime - gameData.currentDay} วัน)`;
+                } else if (survivor.isInjured) {
+                    statusText = `บาดเจ็บ (${survivor.injuryDuration} วัน)`;
+                    statusColor = 'text-red-400';
+                }
+
+                itemDiv.className = `list-item ${survivor.id === gameData.selectedSurvivorId ? 'selected' : ''} ${survivor.isBusy || survivor.isInjured ? 'list-item-disabled' : ''}`;
+                itemDiv.dataset.survivorId = survivor.id;
+                itemDiv.innerHTML = `
+                    <div>
+                        <p class="font-semibold text-lg">${survivor.name}</p>
+                        <p class="text-sm text-gray-300">เลเวล: ${survivor.level} | XP: ${survivor.xp}/${XP_TO_LEVEL[survivor.level] || 'MAX'}</p>
+                    </div>
+                    ${statusText ? `<span class="text-sm ${statusColor}">${statusText}</span>` : ''}
+                `;
+                itemDiv.addEventListener('click', () => {
+                    if (survivor.isBusy || survivor.isInjured) return;
+                    gameData.selectedSurvivorId = survivor.id;
+                    gameData.selectedItemId = null;
+                    updateUI();
+                });
+                survivorListEl.appendChild(itemDiv);
+            });
+        }
+
+        function renderScavengeMissions() {
+            scavengeMissionListEl.innerHTML = '';
+            if (gameData.scavengeMissions.length === 0) {
+                scavengeMissionListEl.innerHTML = '<div class="text-center text-gray-400 py-4">ไม่มีภารกิจหาของในขณะนี้</div>';
+                return;
+            }
+
+            gameData.scavengeMissions.forEach(mission => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `list-item ${mission.id === gameData.selectedMissionId ? 'selected' : ''}`;
+                itemDiv.dataset.missionId = mission.id;
+
+                let difficultyColor = 'text-green-300';
+                if (mission.difficulty === 'ปานกลาง') difficultyColor = 'text-yellow-300';
+                if (mission.difficulty === 'ยาก') difficultyColor = 'text-red-300';
+
+                const displayedDuration = getEffectiveMissionDuration(mission.duration);
+
+                itemDiv.innerHTML = `
+                    <div>
+                        <p class="font-semibold text-lg">${mission.name}</p>
+                        <p class="text-sm text-gray-300">
+                            ระดับ: <span class="${difficultyColor}">${mission.difficulty}</span> |
+                            รางวัล: ${mission.scrapReward}<span class="text-gray-400">&#x1F529;</span>, ${mission.xpReward} XP
+                            ${mission.itemReward ? `, ${ALL_ITEMS[mission.itemReward].name}` : ''}<br>
+                            ระยะเวลา: ${displayedDuration} วัน ${displayedDuration < mission.duration ? `(<span class="text-green-400">ลดลง ${mission.duration - displayedDuration} วัน</span>)` : ''}
+                        </p>
+                    </div>
+                `;
+                itemDiv.addEventListener('click', () => {
+                    gameData.selectedMissionId = mission.id;
+                    updateUI();
+                });
+                scavengeMissionListEl.appendChild(itemDiv);
+            });
+        }
+
+        function renderSelectedSurvivorDetails() {
+            const survivor = gameData.survivors.find(s => s.id === gameData.selectedSurvivorId);
+            if (survivor) {
+                selectedSurvivorDetailsEl.classList.remove('hidden');
+                detailsPanelEl.querySelector('p').classList.add('hidden');
+
+                const effectiveStats = calculateSurvivorStats(survivor);
+
+                detailSurvivorNameEl.textContent = survivor.name;
+                detailSurvivorLevelEl.textContent = survivor.level;
+                detailSurvivorXpEl.textContent = survivor.xp;
+                detailSurvivorXpNeededEl.textContent = XP_TO_LEVEL[survivor.level] || 'MAX';
+                detailSurvivorHealthEl.textContent = survivor.health;
+                detailSurvivorMaxHealthEl.textContent = survivor.maxHealth;
+                detailSurvivorInjuredStatusEl.textContent = survivor.isInjured ? `(บาดเจ็บ ${survivor.injuryDuration} วัน)` : '';
+                detailSurvivorStrengthEl.textContent = effectiveStats.strength;
+                detailSurvivorAgilityEl.textContent = effectiveStats.agility;
+
+                equippedItemsDisplayEl.innerHTML = ``;
+                const slots = [
+                    { name: 'หมวก', id: 'helmet', icon: '&#x1F3A9;' },
+                    { name: 'เสื้อ', id: 'chest', icon: '&#x1F455;' },
+                    { name: 'แขน', id: 'arms', icon: '&#x1F9E4;' },
+                    { name: 'ขา', id: 'legs', icon: '&#x1F456;' },
+                    { name: 'มือหลัก', id: 'mainHand', icon: '&#x1F5E1;&#xFE0F;' },
+                    { name: 'มือรอง', id: 'offHand', icon: '&#x1F6E1;&#xFE0F;' }
+                ];
+
+                slots.forEach(slot => {
+                    const equippedItemId = survivor.equipped[slot.id];
+                    const equippedItemName = equippedItemId ? ALL_ITEMS[equippedItemId].name : 'ไม่มี';
+                    const slotDiv = document.createElement('div');
+                    slotDiv.className = 'equipped-slot';
+                    slotDiv.innerHTML = `
+                        <span class="equipped-slot-name">${slot.icon} ${slot.name}:</span>
+                        <div>
+                            <span class="equipped-item-name">${equippedItemName}</span>
+                            ${equippedItemId ? `<button class="unequip-button" data-slot="${slot.id}" data-survivor-id="${survivor.id}">ถอดออก</button>` : ''}
+                        </div>
+                    `;
+                    equippedItemsDisplayEl.appendChild(slotDiv);
+                });
+
+                equippedItemsDisplayEl.querySelectorAll('.unequip-button').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const slot = event.target.dataset.slot;
+                        const survivorId = event.target.dataset.survivorId;
+                        unequipItem(survivorId, slot);
+                    });
+                });
+
+                healSurvivorButton.disabled = (!survivor.isInjured && survivor.health === survivor.maxHealth) || gameData.medSupplies < HEAL_COST_MED_SUPPLIES;
+
+            } else {
+                selectedSurvivorDetailsEl.classList.add('hidden');
+                detailsPanelEl.querySelector('p').classList.remove('hidden');
+            }
+        }
+
+        function renderInventory() {
+            inventoryListEl.innerHTML = '';
+            let hasItems = false;
+            for (const itemId in ALL_ITEMS) {
+                const item = ALL_ITEMS[itemId];
+                const quantity = gameData.inventory[itemId] || 0;
+
+                if (item.type !== 'consumable' || quantity > 0) {
+                    hasItems = true;
+
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = `list-item text-sm ${itemId === gameData.selectedItemId ? 'selected' : ''}`;
+                    itemDiv.dataset.itemId = itemId;
+
+                    let bonusText = '';
+                    if (item.bonus) {
+                        const bonuses = [];
+                        if (item.bonus.strength) bonuses.push(`STR+${item.bonus.strength}`);
+                        if (item.bonus.agility) bonuses.push(`AGI+${item.bonus.agility}`);
+                        bonusText = `(${bonuses.join(', ')})`;
+                    }
+
+                    const displayCost = getBuyCost(itemId);
+
+                    const qtyDisplay = quantity > 0 ? ` x${quantity}` : '';
+
+                    let buttonHtml = '';
+                    if (gameData.selectedSurvivorId && item.type !== 'consumable' && item.slot !== 'none') {
+                        buttonHtml = `<button class="button button-secondary text-sm px-3 py-1 ml-2" data-action="equip" data-item-id="${itemId}" ${quantity === 0 ? 'disabled' : ''}>สวมใส่</button>`;
+                    }
+                    else if (item.type !== 'consumable') {
+                        buttonHtml = `<button class="button button-secondary text-sm px-3 py-1 ml-2" data-action="select-buy" data-item-id="${itemId}">เลือกซื้อ</button>`;
+                    }
+
+
+                    itemDiv.innerHTML = `
+                        <div>
+                            <p class="font-semibold">${item.name}${qtyDisplay}</p>
+                            <p class="text-gray-400">ประเภท: ${item.type === 'weapon' ? 'อาวุธ' : item.type === 'armor' ? 'ชุดป้องกัน' : 'ใช้แล้วทิ้ง'} ${bonusText}</p>
+                            <p class="text-gray-400">ราคา: ${displayCost.scrap}<span class="text-gray-400">&#x1F529;</span></p>
+                        </div>
+                        ${buttonHtml}
+                    `;
+                    itemDiv.addEventListener('click', (event) => {
+                        if (event.target.tagName === 'BUTTON') {
+                            const action = event.target.dataset.action;
+                            const clickedItemId = event.target.dataset.itemId;
+                            if (action === 'equip' && gameData.selectedSurvivorId) {
+                                equipItem(gameData.selectedSurvivorId, clickedItemId);
+                            } else if (action === 'select-buy') {
+                                gameData.selectedItemId = clickedItemId;
+                                updateUI();
+                            }
+                        } else {
+                            gameData.selectedItemId = itemId;
+                            updateUI();
+                        }
+                    });
+                    inventoryListEl.appendChild(itemDiv);
+                }
+            }
+
+            if (!hasItems) {
+                inventoryListEl.innerHTML = '<div class="text-center text-gray-400 py-4">ไม่มีอุปกรณ์ในคลัง</div>';
+            }
+        }
+
+
+        function renderShelterFacilities() {
+            shelterFacilitiesListEl.innerHTML = '';
+            const availableSurvivors = gameData.survivors.filter(s => s.assignedFacilityId === null && !s.isBusy && !s.isInjured);
+
+            for (const facilityId in gameData.shelter) {
+                const facility = gameData.shelter[facilityId];
+                const upgradeCost = getUpgradeCost(facilityId);
+                const upgradeDuration = getUpgradeDuration(facilityId);
+                const resourceType = Object.keys(upgradeCost)[0];
+
+                const canUpgrade = gameData[resourceType] >= upgradeCost[resourceType] && facility.level < facility.maxLevel && !facility.isUpgrading;
+                const isMaxLevel = facility.level >= facility.maxLevel;
+                const isActive = facility.level > 0 && !facility.isUpgrading;
+
+                let statusText = '';
+                if (facility.level === 0) statusText = `ยังไม่สร้าง (Lv. ${facility.level})`;
+                else if (facility.isUpgrading) statusText = `กำลังอัปเกรด... (${facility.upgradeEndTime - gameData.currentDay} วัน)`;
+                else statusText = `พร้อมใช้งาน (Lv. ${facility.level})`;
+
+
+                let assignedSurvivorsHtml = '';
+                if (facility.assignedSurvivors.length > 0) {
+                    assignedSurvivorsHtml = `<div class="facility-assigned-survivors">มอบหมาย: `;
+                    facility.assignedSurvivors.forEach(survivorId => {
+                        const assignedSurvivor = gameData.survivors.find(s => s.id === survivorId);
+                        if (assignedSurvivor) {
+                            assignedSurvivorsHtml += `<span>${assignedSurvivor.name} <button class="unequip-button" data-survivor-id="${survivorId}" data-facility-id="${facilityId}">ถอนตัว</button></span>`;
+                        }
+                    });
+                    assignedSurvivorsHtml += `</div>`;
+                }
+
+                const assignButtonEnabled = isActive && facility.assignedSurvivors.length < facility.slots && availableSurvivors.length > 0;
+                const assignButtonHtml = assignButtonEnabled ?
+                    `<select class="bg-gray-700 text-white p-1 rounded mr-2" id="assign-select-${facilityId}">
+                        ${availableSurvivors.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
+                    </select>
+                    <button class="button button-secondary text-sm px-3 py-1" data-action="assign" data-facility-id="${facilityId}">มอบหมาย</button>`
+                    : `<span class="text-sm text-gray-500">${isActive ? (facility.assignedSurvivors.length === facility.slots ? 'ช่องเต็มแล้ว' : 'ไม่มีผู้รอดชีวิตว่าง') : 'ยังไม่พร้อมมอบหมาย'}</span>`;
+
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `list-item flex-col items-start`;
+                itemDiv.innerHTML = `
+                    <div class="w-full flex justify-between items-center mb-2">
+                        <p class="font-semibold text-lg">${facility.name} <span class="text-gray-400 text-base">(${statusText})</span></p>
+                        ${!isMaxLevel && !facility.isUpgrading ?
+                            `<button class="button button-secondary text-sm px-3 py-1" data-action="upgrade" data-facility-id="${facilityId}" ${!canUpgrade ? 'disabled' : ''}>
+                                อัปเกรด (${upgradeCost[resourceType]}<span class="text-gray-400">&#x1F529;</span>, ${upgradeDuration} วัน)
+                            </button>` :
+                            (isMaxLevel ? `<span class="text-sm text-gray-400">เลเวลสูงสุด</span>` : '')
+                        }
+                    </div>
+                    <p class="text-sm text-gray-300 w-full mb-2">ประโยชน์: ${facility.benefitDesc}</p>
+                    ${isActive ? `<p class="text-sm text-gray-300">ช่อง: ${facility.assignedSurvivors.length}/${facility.slots}</p>` : ''}
+                    ${assignedSurvivorsHtml}
+                    ${isActive && !facility.isUpgrading ? `<div class="w-full flex items-center justify-end mt-2">${assignButtonHtml}</div>` : ''}
+                `;
+                shelterFacilitiesListEl.appendChild(itemDiv);
+
+                // Attach event listener for upgrade button
+                const upgradeButton = itemDiv.querySelector('button[data-action="upgrade"]');
+                if (upgradeButton) {
+                    upgradeButton.addEventListener('click', (event) => {
+                        const id = event.target.dataset.facilityId;
+                        upgradeFacility(id);
+                    });
+                }
+
+                // Attach event listener for assign button
+                const assignButton = itemDiv.querySelector('button[data-action="assign"]');
+                if (assignButton) {
+                    assignButton.addEventListener('click', (event) => {
+                        const id = event.target.dataset.facilityId;
+                        const selectEl = document.getElementById(`assign-select-${id}`);
+                        if (selectEl && selectEl.value) {
+                            assignSurvivorToFacility(selectEl.value, id);
+                        }
+                    });
+                }
+
+                // Attach event listener for unassign buttons
+                itemDiv.querySelectorAll('.unequip-button').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const survivorId = event.target.dataset.survivorId;
+                        const facilityId = event.target.dataset.facilityId;
+                        unassignSurvivorFromFacility(survivorId, facilityId);
+                    });
+                });
+            }
+        }
+
+        function updateSendScavengeMissionButtonState() {
+            const survivor = gameData.survivors.find(s => s.id === gameData.selectedSurvivorId);
+            const mission = gameData.scavengeMissions.find(m => m.id === gameData.selectedMissionId);
+
+            if (survivor && mission && !survivor.isBusy && !survivor.isInjured && survivor.assignedFacilityId === null) {
+                sendScavengeMissionButton.disabled = false;
+            } else {
+                sendScavengeMissionButton.disabled = true;
+            }
+        }
+
+        function updateBuyItemButtonState() {
+            const selectedItem = gameData.selectedItemId ? ALL_ITEMS[gameData.selectedItemId] : null;
+            if (selectedItem) {
+                const cost = getBuyCost(selectedItem.id);
+                buyItemButton.disabled = (gameData.scrap < cost.scrap || gameData.food < cost.food || gameData.water < cost.water || gameData.medSupplies < cost.medSupplies);
+
+                let costText = `${cost.scrap}<span class="text-gray-400">&#x1F529;</span>`;
+                if (cost.food > 0) costText += `, ${cost.food}<span class="text-green-400">&#x1F355;</span>`;
+                if (cost.water > 0) costText += `, ${cost.water}<span class="text-blue-400">&#x1F4A7;</span>`;
+                if (cost.medSupplies > 0) costText += `, ${cost.medSupplies}<span class="text-red-400">&#x1F48A;</span>`;
+                itemBuyCostEl.innerHTML = costText;
+            } else {
+                buyItemButton.disabled = true;
+                itemBuyCostEl.textContent = '0';
+            }
+        }
+
+        // --- Event Listeners ---
+        nextDayButton.addEventListener('click', () => {
+            gameData.currentDay++;
+            addLog(`เข้าสู่วันที่ ${gameData.currentDay}`);
+
+            // Daily resource consumption
+            gameData.food = Math.max(0, gameData.food - gameData.survivors.length * 5);
+            gameData.water = Math.max(0, gameData.water - gameData.survivors.length * 5);
+            addLog(`กลุ่มผู้รอดชีวิตใช้อาหารและน้ำ ${gameData.survivors.length * 5} หน่วย`);
+            if (gameData.food === 0 || gameData.water === 0) {
+                 addLog(`กลุ่มผู้รอดชีวิตกำลังหิวโหยหรือกระหายน้ำ!`);
+                 // Implement negative effects for starvation/dehydration here
+            }
+
+            // Daily resource production from facilities and facility upgrade completion
+            for (const facilityId in gameData.shelter) {
+                const facility = gameData.shelter[facilityId];
+
+                // Complete upgrades
+                if (facility.isUpgrading && facility.upgradeEndTime <= gameData.currentDay) {
+                    facility.isUpgrading = false;
+                    facility.level++;
+                    facility.slots = facility.level; // Update slots
+                    addLog(`${facility.name} อัปเกรดเป็นเลเวล ${facility.level} เสร็จสมบูรณ์แล้ว!`);
+                }
+
+                // Production from active facilities (not upgrading)
+                if (facility.level > 0 && !facility.isUpgrading) {
+                    if (facility.production) {
+                        for (const resType in facility.production) {
+                            let produced = facility.level * facility.production[resType];
+                            // Add bonus from assigned survivors (e.g., 5% per survivor)
+                            if (facility.assignedSurvivors.length > 0) {
+                                produced += produced * facility.assignedSurvivors.length * 0.05; // 5% bonus per assigned survivor
+                            }
+                            produced = Math.round(produced); // Round to nearest whole number
+                            gameData[resType] += produced;
+                            addLog(`${facility.name} ผลิต ${resType === 'food' ? 'อาหาร' : resType === 'water' ? 'น้ำ' : 'เวชภัณฑ์'} ได้ ${produced} หน่วย`);
+                        }
+                    }
+                }
+            }
+
+
+            // Process survivor states (injury, mission completion)
+            for (let i = gameData.survivors.length - 1; i >= 0; i--) {
+                const survivor = gameData.survivors[i];
+
+                // Reduce injury duration
+                if (survivor.isInjured && survivor.injuryDuration > 0) {
+                    survivor.injuryDuration--;
+                    if (survivor.injuryDuration === 0) {
+                        survivor.isInjured = false;
+                        addLog(`${survivor.name} หายจากการบาดเจ็บแล้ว!`);
+                    }
+                }
+
+                // Process completed missions (only if not assigned to facility)
+                if (survivor.isBusy && survivor.currentMissionId && survivor.missionEndTime <= gameData.currentDay) {
+                    processMissionResults(survivor); // This function might remove the survivor
+                }
+            }
+
+            if (gameData.currentDay % 3 === 0) {
+                generateNewScavengeMissions();
+            }
+
+            updateUI();
+        });
+
+        saveGameButton.addEventListener('click', saveGame);
+        loadGameButton.addEventListener('click', loadGame);
+        viewToggleButton.addEventListener('click', toggleView);
+
+        sendScavengeMissionButton.addEventListener('click', sendSurvivorOnScavengeMission);
+        buyItemButton.addEventListener('click', buyItem);
+        messageBoxOk.addEventListener('click', () => hideMessageBox(true)); // For confirm box 'ok'
+        messageBoxCancel.addEventListener('click', () => hideMessageBox(false)); // For confirm box 'cancel'
+
+        healSurvivorButton.addEventListener('click', () => {
+            if (gameData.selectedSurvivorId) {
+                healSurvivor(gameData.selectedSurvivorId);
+            }
+        });
+
+
+        // --- Initial Load ---
+        window.onload = initializeGame;
+    </script>
+</body>
+</html>
