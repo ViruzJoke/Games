@@ -394,19 +394,44 @@
         const messageBox = document.getElementById('message-box');
         const messageBoxText = document.getElementById('message-box-text');
         const messageBoxOk = document.getElementById('message-box-ok');
-        const messageBoxCancel = document.getElementById('message-box-cancel'); // New
+        const messageBoxCancel = document.getElementById('message-box-cancel');
         const shelterFacilitiesListEl = document.getElementById('shelter-facilities-list');
 
-        // --- Game Data ---
-        let gameData = {
+        // --- Game Constants ---
+        const BASE_SURVIVOR_HEALTH = 100;
+        const BASE_INJURY_DURATION = 3;
+        const MAJOR_INJURY_DURATION = 5;
+        const HEAL_COST_MED_SUPPLIES = 10;
+        const SURVIVOR_DISCOVERY_CHANCE = 0.10; // 10% chance
+
+        const XP_TO_LEVEL = [0, 100, 250, 500, 800, 1200, 1800, 2500, 3500, 5000];
+
+        // Define a template for initial game state to use for loading (for backward compatibility)
+        const DEFAULT_GAME_STATE = {
             currentDay: 1,
             scrap: 500,
-            food: 100,
-            water: 100,
+            food: 200,
+            water: 200,
             medSupplies: 50,
-            survivors: [],
-            scavengeMissions: [],
-            inventory: {},
+            survivors: [
+                { id: 'S0', name: 'Rick', level: 1, xp: 0, strength: 25, agility: 25, health: BASE_SURVIVOR_HEALTH, maxHealth: BASE_SURVIVOR_HEALTH, isInjured: false, injuryDuration: 0, isBusy: false, missionEndTime: 0, currentMissionId: null, assignedFacilityId: null, equipped: { helmet: null, chest: 'armor_reinforced_chest', arms: null, legs: null, mainHand: 'weapon_shotgun', offHand: null } },
+                { id: 'S1', name: 'Michonne', level: 1, xp: 0, strength: 15, agility: 20, health: BASE_SURVIVOR_HEALTH, maxHealth: BASE_SURVIVOR_HEALTH, isInjured: false, injuryDuration: 0, isBusy: false, missionEndTime: 0, currentMissionId: null, assignedFacilityId: null, equipped: { helmet: null, chest: 'armor_makeshift_chest', arms: null, legs: null, mainHand: 'weapon_machete', offHand: null } },
+                { id: 'S2', name: 'Daryl', level: 1, xp: 0, strength: 20, agility: 18, health: BASE_SURVIVOR_HEALTH, maxHealth: BASE_SURVIVOR_HEALTH, isInjured: false, injuryDuration: 0, isBusy: false, missionEndTime: 0, currentMissionId: null, assignedFacilityId: null, equipped: { helmet: null, chest: null, arms: null, legs: null, mainHand: 'weapon_assault_rifle', offHand: null } }
+            ],
+            scavengeMissions: [], // Will be regenerated anyway
+            inventory: {
+                'weapon_shotgun': 1,
+                'armor_reinforced_chest': 1,
+                'weapon_pipe_melee': 2,
+                'armor_makeshift_chest': 1,
+                'weapon_assault_rifle': 1,
+                'armor_makeshift_helmet': 1,
+                'armor_makeshift_arms': 1,
+                'armor_makeshift_legs': 1,
+                'weapon_machete': 1,
+                'weapon_pistol': 1,
+                'weapon_heavy_shield': 1,
+            },
             selectedSurvivorId: null,
             selectedMissionId: null,
             selectedItemId: null,
@@ -422,11 +447,8 @@
             }
         };
 
-        const BASE_SURVIVOR_HEALTH = 100;
-        const BASE_INJURY_DURATION = 3;
-        const MAJOR_INJURY_DURATION = 5;
-        const HEAL_COST_MED_SUPPLIES = 10;
-        const SURVIVOR_DISCOVERY_CHANCE = 0.10; // 10% chance
+        // --- Game Data (will be initialized from DEFAULT_GAME_STATE) ---
+        let gameData;
 
         const BASE_SCAVENGE_MISSIONS = [
             { id: 'M1', name: 'ซูเปอร์มาร์เก็ตร้าง', difficulty: 'ง่าย', xpReward: 50, scrapReward: 100, itemReward: 'weapon_pipe_melee', successChanceBase: 0.8, duration: 1 },
@@ -439,24 +461,24 @@
             { id: 'M8', name: 'เขตอุตสาหกรรมอันตราย', difficulty: 'ยาก', xpReward: 400, scrapReward: 800, itemReward: 'weapon_heavy_shield', successChanceBase: 0.3, duration: 5 },
         ];
 
+        // Updated ALL_ITEMS with icons
         const ALL_ITEMS = {
-            'weapon_pipe_melee': { id: 'weapon_pipe_melee', name: 'ท่อนเหล็กทุบ', type: 'weapon', slot: 'one_hand', bonus: { strength: 5, agility: 2 }, cost: 50 },
-            'armor_makeshift_chest': { id: 'armor_makeshift_chest', name: 'เสื้อเกราะประดิษฐ์', type: 'armor', slot: 'chest', bonus: { agility: 5 }, cost: 75 },
-            'weapon_shotgun': { id: 'weapon_shotgun', name: 'ปืนลูกซอง', type: 'weapon', slot: 'two_hand', bonus: { strength: 20, agility: 5 }, cost: 500 },
-            'armor_reinforced_chest': { id: 'armor_reinforced_chest', name: 'เสื้อเกราะเสริมเหล็ก', type: 'armor', slot: 'chest', bonus: { strength: 10 }, cost: 200 },
-            'weapon_assault_rifle': { id: 'weapon_assault_rifle', name: 'ปืนไรเฟิลจู่โจม', type: 'weapon', slot: 'ranged', bonus: { agility: 8 }, cost: 120 },
-            'medical_kit': { id: 'medical_kit', name: 'ชุดปฐมพยาบาล', type: 'consumable', slot: 'none', cost: 30 },
-            'armor_makeshift_helmet': { id: 'armor_makeshift_helmet', name: 'หมวกประดิษฐ์', type: 'armor', slot: 'helmet', bonus: { strength: 2, agility: 1 }, cost: 60 },
-            'armor_makeshift_arms': { id: 'armor_makeshift_arms', name: 'เกราะแขนประดิษฐ์', type: 'armor', slot: 'arms', bonus: { strength: 3, agility: 0 }, cost: 40 },
-            'armor_makeshift_legs': { id: 'armor_makeshift_legs', name: 'เกราะขาประดิษฐ์', type: 'armor', slot: 'legs', bonus: { strength: 3, agility: 1 }, cost: 50 },
-            'weapon_machete': { id: 'weapon_machete', name: 'มีดมาเชเต้', type: 'weapon', slot: 'one_hand', bonus: { strength: 8, agility: 3 }, cost: 80 },
-            'weapon_pistol': { id: 'weapon_pistol', name: 'ปืนพก', type: 'weapon', slot: 'one_hand', bonus: { agility: 6 }, cost: 70 },
-            'weapon_heavy_shield': { id: 'weapon_heavy_shield', name: 'โล่หนัก', type: 'armor', slot: 'shield', bonus: { strength: 15 }, cost: 150 },
-            'armor_military_helmet': { id: 'armor_military_helmet', name: 'หมวกทหาร', type: 'armor', slot: 'helmet', bonus: { strength: 5, agility: 2 }, cost: 150 },
-            'armor_military_chest': { id: 'armor_military_chest', name: 'เสื้อเกราะทหาร', type: 'armor', slot: 'chest', bonus: { strength: 15, agility: 5 }, cost: 300 },
+            'weapon_pipe_melee': { id: 'weapon_pipe_melee', name: 'ท่อนเหล็กทุบ', type: 'weapon', slot: 'one_hand', bonus: { strength: 5, agility: 2 }, cost: 50, icon: '⚔️' },
+            'armor_makeshift_chest': { id: 'armor_makeshift_chest', name: 'เสื้อเกราะประดิษฐ์', type: 'armor', slot: 'chest', bonus: { agility: 5 }, cost: 75, icon: '🛡️' },
+            'weapon_shotgun': { id: 'weapon_shotgun', name: 'ปืนลูกซอง', type: 'weapon', slot: 'two_hand', bonus: { strength: 20, agility: 5 }, cost: 500, icon: '🔫' },
+            'armor_reinforced_chest': { id: 'armor_reinforced_chest', name: 'เสื้อเกราะเสริมเหล็ก', type: 'armor', slot: 'chest', bonus: { strength: 10 }, cost: 200, icon: '🛡️' },
+            'weapon_assault_rifle': { id: 'weapon_assault_rifle', name: 'ปืนไรเฟิลจู่โจม', type: 'weapon', slot: 'ranged', bonus: { agility: 8 }, cost: 120, icon: '🔫' },
+            'medical_kit': { id: 'medical_kit', name: 'ชุดปฐมพยาบาล', type: 'consumable', slot: 'none', cost: 30, icon: '💊' },
+            'armor_makeshift_helmet': { id: 'armor_makeshift_helmet', name: 'หมวกประดิษฐ์', type: 'armor', slot: 'helmet', bonus: { strength: 2, agility: 1 }, cost: 60, icon: '🪖' },
+            'armor_makeshift_arms': { id: 'armor_makeshift_arms', name: 'เกราะแขนประดิษฐ์', type: 'armor', slot: 'arms', bonus: { strength: 3, agility: 0 }, cost: 40, icon: '🧤' },
+            'armor_makeshift_legs': { id: 'armor_makeshift_legs', name: 'เกราะขาประดิษฐ์', type: 'armor', slot: 'legs', bonus: { strength: 3, agility: 1 }, cost: 50, icon: '👖' },
+            'weapon_machete': { id: 'weapon_machete', name: 'มีดมาเชเต้', type: 'weapon', slot: 'one_hand', bonus: { strength: 8, agility: 3 }, cost: 80, icon: '🔪' },
+            'weapon_pistol': { id: 'weapon_pistol', name: 'ปืนพก', type: 'weapon', slot: 'one_hand', bonus: { agility: 6 }, cost: 70, icon: '🔫' },
+            'weapon_heavy_shield': { id: 'weapon_heavy_shield', name: 'โล่หนัก', type: 'armor', slot: 'shield', bonus: { strength: 15 }, cost: 150, icon: '🛡️' },
+            'armor_military_helmet': { id: 'armor_military_helmet', name: 'หมวกทหาร', type: 'armor', slot: 'helmet', bonus: { strength: 5, agility: 2 }, cost: 150, icon: '🪖' },
+            'armor_military_chest': { id: 'armor_military_chest', name: 'เสื้อเกราะทหาร', type: 'armor', slot: 'chest', bonus: { strength: 15, agility: 5 }, cost: 300, icon: '🛡️' },
         };
 
-        const XP_TO_LEVEL = [0, 100, 250, 500, 800, 1200, 1800, 2500, 3500, 5000];
 
         // --- Utility Functions ---
         function addLog(message) {
@@ -480,6 +502,8 @@
                 messageBoxOk.textContent = buttons[0] || 'ตกลง';
                 messageBoxCancel.textContent = buttons[1] || 'ยกเลิก';
                 messageBoxCancel.classList.remove('hidden');
+                messageBox.classList.add('visible'); // Show immediately for confirm
+                clearTimeout(messageBoxTimeout); // No auto-hide for confirm
                 return new Promise(resolve => {
                     messageBoxResolve = resolve;
                 });
@@ -518,35 +542,14 @@
 
         // --- Game Logic ---
         function initializeGame() {
-            gameData.survivors = [
-                { id: 'S0', name: 'Rick', level: 5, xp: 0, strength: 25, agility: 25, health: BASE_SURVIVOR_HEALTH, maxHealth: BASE_SURVIVOR_HEALTH, isInjured: false, injuryDuration: 0, isBusy: false, missionEndTime: 0, currentMissionId: null, assignedFacilityId: null, equipped: { helmet: null, chest: 'armor_reinforced_chest', arms: null, legs: null, mainHand: 'weapon_shotgun', offHand: null } },
-                { id: 'S1', name: 'Michonne', level: 3, xp: 0, strength: 15, agility: 20, health: BASE_SURVIVOR_HEALTH, maxHealth: BASE_SURVIVOR_HEALTH, isInjured: false, injuryDuration: 0, isBusy: false, missionEndTime: 0, currentMissionId: null, assignedFacilityId: null, equipped: { helmet: null, chest: 'armor_makeshift_chest', arms: null, legs: null, mainHand: 'weapon_machete', offHand: null } },
-                { id: 'S2', name: 'Daryl', level: 4, xp: 0, strength: 20, agility: 18, health: BASE_SURVIVOR_HEALTH, maxHealth: BASE_SURVIVOR_HEALTH, isInjured: false, injuryDuration: 0, isBusy: false, missionEndTime: 0, currentMissionId: null, assignedFacilityId: null, equipped: { helmet: null, chest: null, arms: null, legs: null, mainHand: 'weapon_assault_rifle', offHand: null } }
-            ];
-            gameData.scrap = 500;
-            gameData.food = 200;
-            gameData.water = 200;
-            gameData.medSupplies = 50;
-            gameData.inventory = {
-                'weapon_shotgun': 1,
-                'armor_reinforced_chest': 1,
-                'weapon_pipe_melee': 2,
-                'armor_makeshift_chest': 1,
-                'weapon_assault_rifle': 1,
-                'armor_makeshift_helmet': 1,
-                'armor_makeshift_arms': 1,
-                'armor_makeshift_legs': 1,
-                'weapon_machete': 1,
-                'weapon_pistol': 1,
-                'weapon_heavy_shield': 1,
-            };
-            gameData.currentDay = 1;
+            // Deep copy the default game state to initialize
+            gameData = JSON.parse(JSON.stringify(DEFAULT_GAME_STATE)); 
             gameData.selectedSurvivorId = null;
             gameData.selectedMissionId = null;
             gameData.selectedItemId = null;
             gameData.currentView = 'outpost';
 
-            generateNewScavengeMissions();
+            generateNewScavengeMissions(); // This will populate gameData.scavengeMissions
             updateUI();
             addLog("ยินดีต้อนรับสู่ Zombie Survival Outpost! เราต้องรอด!");
         }
@@ -569,41 +572,80 @@
                 const savedData = localStorage.getItem('zombieSurvivalSave');
                 if (savedData) {
                     const loadedGameData = JSON.parse(savedData);
-                    // Ensure compatibility with older saves if new properties are added
-                    // Example: if assignedFacilityId was added later, set default for old saves
-                    if (!loadedGameData.survivors[0].hasOwnProperty('assignedFacilityId')) {
-                         loadedGameData.survivors.forEach(s => s.assignedFacilityId = null);
-                    }
-                    // For facilities, ensure new facilities/properties exist and are initialized if loading old save
-                    for (const key in gameData.shelter) {
-                        if (!loadedGameData.shelter.hasOwnProperty(key)) {
-                            loadedGameData.shelter[key] = gameData.shelter[key]; // Add new facilities
-                        } else {
-                            // Ensure new properties within facilities are also initialized for old saves
-                            if (!loadedGameData.shelter[key].hasOwnProperty('assignedSurvivors')) loadedGameData.shelter[key].assignedSurvivors = [];
-                            if (!loadedGameData.shelter[key].hasOwnProperty('isUpgrading')) loadedGameData.shelter[key].isUpgrading = false;
-                            if (!loadedGameData.shelter[key].hasOwnProperty('upgradeEndTime')) loadedGameData.shelter[key].upgradeEndTime = 0;
-                            if (!loadedGameData.shelter[key].hasOwnProperty('slots')) loadedGameData.shelter[key].slots = 0; // Default to 0 slots for loaded
-                        }
-                    }
+
+                    // Create a deep copy of the current default gameData structure
+                    // This ensures any new properties or facilities added to the game
+                    // are present even if loading an old save.
+                    const defaultGameDataCopy = JSON.parse(JSON.stringify(DEFAULT_GAME_STATE)); 
                     
-                    gameData = loadedGameData;
-                    // Reset selected items/survivors for safety after loading
+                    // Merge loaded data onto the default structure
+                    // This prioritizes loaded values but ensures new fields exist.
+                    gameData.currentDay = loadedGameData.currentDay !== undefined ? loadedGameData.currentDay : defaultGameDataCopy.currentDay;
+                    gameData.scrap = loadedGameData.scrap !== undefined ? loadedGameData.scrap : defaultGameDataCopy.scrap;
+                    gameData.food = loadedGameData.food !== undefined ? loadedGameData.food : defaultGameDataCopy.food;
+                    gameData.water = loadedGameData.water !== undefined ? loadedGameData.water : defaultGameDataCopy.water;
+                    gameData.medSupplies = loadedGameData.medSupplies !== undefined ? loadedGameData.medSupplies : defaultGameDataCopy.medSupplies;
+
+                    // Merge survivors carefully to maintain structure
+                    gameData.survivors = loadedGameData.survivors.map(loadedSurvivor => {
+                        // Use a basic survivor template to ensure all properties exist
+                        const defaultSurvivorTemplate = {
+                            id: '', name: '', level: 1, xp: 0, strength: 10, agility: 10,
+                            health: BASE_SURVIVOR_HEALTH, maxHealth: BASE_SURVIVOR_HEALTH,
+                            isInjured: false, injuryDuration: 0, isBusy: false, missionEndTime: 0,
+                            currentMissionId: null, assignedFacilityId: null,
+                            equipped: { helmet: null, chest: null, arms: null, legs: null, mainHand: null, offHand: null }
+                        };
+                        // Merge loaded properties onto the template, ensuring nested 'equipped' is merged
+                        return { 
+                            ...defaultSurvivorTemplate, 
+                            ...loadedSurvivor,
+                            equipped: { ...defaultSurvivorTemplate.equipped, ...(loadedSurvivor.equipped || {}) } // Deep merge for equipped
+                        };
+                    });
+
+                    // Merge inventory (simply overwrite with loaded if exists, else use default)
+                    gameData.inventory = loadedGameData.inventory ? { ...loadedGameData.inventory } : { ...defaultGameDataCopy.inventory };
+
+                    // Merge shelter facilities
+                    for (const facilityId in defaultGameDataCopy.shelter) { // Iterate over expected facilities from default template
+                        if (loadedGameData.shelter && loadedGameData.shelter[facilityId]) {
+                            // Merge loaded facility properties onto the default template for that facility
+                            gameData.shelter[facilityId] = { 
+                                ...defaultGameDataCopy.shelter[facilityId], 
+                                ...loadedGameData.shelter[facilityId] 
+                            };
+                        } else {
+                            // If facility didn't exist in saved data, use the default template for that facility
+                            gameData.shelter[facilityId] = { ...defaultGameDataCopy.shelter[facilityId] };
+                        }
+                        // Ensure slots are correctly calculated from level for backward compatibility
+                        gameData.shelter[facilityId].slots = gameData.shelter[facilityId].level;
+                        if (gameData.shelter[facilityId].level === 0) gameData.shelter[facilityId].slots = 0;
+                        
+                        // Ensure assignedSurvivors array is not null/undefined for older saves
+                        if (!gameData.shelter[facilityId].assignedSurvivors) gameData.shelter[facilityId].assignedSurvivors = [];
+
+                        // Ensure upgrade status properties exist
+                        if (gameData.shelter[facilityId].isUpgrading === undefined) gameData.shelter[facilityId].isUpgrading = false;
+                        if (gameData.shelter[facilityId].upgradeEndTime === undefined) gameData.shelter[facilityId].upgradeEndTime = 0;
+                    }
+
+                    // Scavenge Missions will be regenerated, no need to load old ones.
+                    gameData.scavengeMissions = []; // Ensure old missions are cleared for regeneration
+
                     gameData.selectedSurvivorId = null;
                     gameData.selectedMissionId = null;
                     gameData.selectedItemId = null;
-                    gameData.currentView = 'outpost'; // Ensure starts on outpost view
-
-                    // Re-calculate assigned slots based on current facility levels for backward compatibility
-                    for (const facilityId in gameData.shelter) {
-                        const facility = gameData.shelter[facilityId];
-                        facility.slots = facility.level; // Set slots based on current level
-                        if (facility.level === 0) facility.slots = 0; // Level 0 means 0 slots
-                    }
-
+                    gameData.currentView = loadedGameData.currentView || 'outpost'; // Load view state
 
                     updateUI();
-                    showMainGameView(); // Ensure the correct view is shown
+                    // Ensure correct view is displayed after loading
+                    if (gameData.currentView === 'outpost') {
+                        showMainGameView();
+                    } else {
+                        showShelterView();
+                    }
                     addLog("โหลดเกมสำเร็จ!");
                     showMessageBox("โหลดเกมสำเร็จ!");
                 } else {
@@ -645,23 +687,26 @@
 
         function getEffectiveMissionDuration(baseDuration) {
             const infirmary = gameData.shelter.infirmary;
-            let reduction = (infirmary.level * infirmary.benefit); // Base reduction from infirmary level
-            if (infirmary.isUpgrading) reduction = 0; // No benefit if upgrading
-            // Additional reduction from assigned survivors in infirmary (if any benefit defined)
-            if (infirmary.assignedSurvivors.length > 0) {
-                 // For example, 0.1 day reduction per assigned survivor
-                 reduction += infirmary.assignedSurvivors.length * 0.1;
+            let reduction = 0;
+            if (infirmary.level > 0 && !infirmary.isUpgrading) { // Only apply benefit if built and not upgrading
+                reduction += (infirmary.level * infirmary.benefit); // Base reduction from infirmary level
+                if (infirmary.assignedSurvivors.length > 0) {
+                    // Each assigned survivor adds 0.1 day reduction
+                    reduction += infirmary.assignedSurvivors.length * 0.1;
+                }
             }
             return Math.max(1, baseDuration - reduction);
         }
 
         function getEffectiveInjuryDuration(baseDuration) {
             const infirmary = gameData.shelter.infirmary;
-            let reduction = (infirmary.level * infirmary.benefit);
-            if (infirmary.isUpgrading) reduction = 0;
-            // Additional reduction from assigned survivors in infirmary
-            if (infirmary.assignedSurvivors.length > 0) {
-                 reduction += infirmary.assignedSurvivors.length * 0.5; // E.g., 0.5 day reduction per assigned survivor
+            let reduction = 0;
+            if (infirmary.level > 0 && !infirmary.isUpgrading) { // Only apply benefit if built and not upgrading
+                reduction += (infirmary.level * infirmary.benefit);
+                // Each assigned survivor adds 0.5 day reduction
+                if (infirmary.assignedSurvivors.length > 0) {
+                    reduction += infirmary.assignedSurvivors.length * 0.5;
+                }
             }
             return Math.max(1, baseDuration - reduction);
         }
@@ -669,12 +714,13 @@
         // Calculate effective bonus chance for missions from Guard Post
         function getEffectiveMissionSuccessBonus() {
             const guardPost = gameData.shelter.guardPost;
-            if (guardPost.level === 0 || guardPost.isUpgrading) return 0; // No bonus if not built or upgrading
-            let bonus = guardPost.level * guardPost.bonusChance; // Base bonus from level
-            // Add bonus from assigned survivors
-            if (guardPost.assignedSurvivors.length > 0) {
-                // Example: each assigned survivor adds 0.5% bonus
-                bonus += guardPost.assignedSurvivors.length * 0.005;
+            let bonus = 0;
+            if (guardPost.level > 0 && !guardPost.isUpgrading) { // Only apply benefit if built and not upgrading
+                bonus += guardPost.level * guardPost.bonusChance; // Base bonus from level
+                // Each assigned survivor adds 1% bonus
+                if (guardPost.assignedSurvivors.length > 0) {
+                    bonus += guardPost.assignedSurvivors.length * 0.01;
+                }
             }
             return bonus;
         }
@@ -996,7 +1042,13 @@
             }
             const cost = getBuyCost(item.id);
 
-            if (gameData.scrap >= cost.scrap && gameData.food >= cost.food && gameData.water >= cost.water && gameData.medSupplies >= cost.medSupplies) {
+            // Check if all resources are sufficient
+            const hasEnoughResources = gameData.scrap >= cost.scrap &&
+                                       gameData.food >= cost.food &&
+                                       gameData.water >= cost.water &&
+                                       gameData.medSupplies >= cost.medSupplies;
+
+            if (hasEnoughResources) {
                 gameData.scrap -= cost.scrap;
                 gameData.food -= cost.food;
                 gameData.water -= cost.water;
@@ -1060,7 +1112,8 @@
                 addLog(`${facility.name} เริ่มอัปเกรดเป็นเลเวล ${facility.level + 1} แล้ว จะเสร็จใน ${duration} วัน!`);
                 updateUI();
             } else {
-                showMessageBox(`เศษวัสดุไม่พออัปเกรด ${facility.name}! ต้องใช้ ${cost[resourceType]} ${resourceType === 'scrap' ? 'เศษวัสดุ' : ''}`);
+                let missingResourceName = resourceType === 'scrap' ? 'เศษวัสดุ' : resourceType; // More descriptive name
+                showMessageBox(`ทรัพยากรไม่พออัปเกรด ${facility.name}! ต้องใช้ ${cost[resourceType]} ${missingResourceName}`);
             }
         }
 
@@ -1273,6 +1326,7 @@
                 const item = ALL_ITEMS[itemId];
                 const quantity = gameData.inventory[itemId] || 0;
 
+                // Show all non-consumable items and all owned consumables
                 if (item.type !== 'consumable' || quantity > 0) {
                     hasItems = true;
 
@@ -1303,7 +1357,7 @@
 
                     itemDiv.innerHTML = `
                         <div>
-                            <p class="font-semibold">${item.name}${qtyDisplay}</p>
+                            <p class="font-semibold">${item.icon} ${item.name}${qtyDisplay}</p> <!-- Added item.icon -->
                             <p class="text-gray-400">ประเภท: ${item.type === 'weapon' ? 'อาวุธ' : item.type === 'armor' ? 'ชุดป้องกัน' : 'ใช้แล้วทิ้ง'} ${bonusText}</p>
                             <p class="text-gray-400">ราคา: ${displayCost.scrap}<span class="text-gray-400">&#x1F529;</span></p>
                         </div>
@@ -1476,7 +1530,7 @@
                 if (facility.isUpgrading && facility.upgradeEndTime <= gameData.currentDay) {
                     facility.isUpgrading = false;
                     facility.level++;
-                    facility.slots = facility.level; // Update slots
+                    facility.slots = facility.level; // Update slots based on new level
                     addLog(`${facility.name} อัปเกรดเป็นเลเวล ${facility.level} เสร็จสมบูรณ์แล้ว!`);
                 }
 
